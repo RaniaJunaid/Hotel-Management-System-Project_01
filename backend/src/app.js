@@ -2,18 +2,23 @@ require('dotenv').config();
 const express = require('express');
 const cors    = require('cors');
 const helmet  = require('helmet');
+const userRoutes = require('./routes/users.routes');
 
 const authRoutes        = require('./routes/auth.routes');
 const roomRoutes        = require('./routes/rooms.routes');
 const reservationRoutes = require('./routes/reservations.routes');
 const guestRoutes       = require('./routes/guests.routes');
 const invoiceRoutes     = require('./routes/invoices.routes');
+const housekeepingRoutes = require('./routes/housekeeping.routes');
 const errorHandler      = require('./middleware/errorHandler');
 
 const app = express();
 
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3001',
+  credentials: true
+}));
 app.use(express.json());
 
 app.use('/api/v1/auth',         authRoutes);
@@ -21,6 +26,8 @@ app.use('/api/v1/rooms',        roomRoutes);
 app.use('/api/v1/reservations', reservationRoutes);
 app.use('/api/v1/guests',       guestRoutes);
 app.use('/api/v1/invoices',     invoiceRoutes);
+app.use('/api/v1/housekeeping', housekeepingRoutes);
+app.use('/api/v1/users', userRoutes);
 
 app.get('/api/v1/health', (req, res) => {
   res.status(200).json({

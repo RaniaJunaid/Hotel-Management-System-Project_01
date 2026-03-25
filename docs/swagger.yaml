@@ -1,0 +1,1448 @@
+openapi: 3.0.0
+info:
+  title: Hotel Management System API
+  version: 1.0.0
+  description: REST API for Hotel Management System — Grand Plaza Hotels
+
+servers:
+  - url: http://localhost:3000/api/v1
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+
+security:
+  - BearerAuth: []
+
+paths:
+
+  /health:
+    get:
+      summary: Health check
+      security: []
+      tags: [Health]
+      responses:
+        '200':
+          description: Server is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Server is running.
+                  timestamp:
+                    type: string
+                    example: "2026-03-01T10:00:00.000Z"
+
+  /auth/login:
+    post:
+      summary: Login and receive JWT token
+      security: []
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                  example: rec_nyc1
+                password:
+                  type: string
+                  example: password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Login successful.
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                      user:
+                        type: object
+                        properties:
+                          user_id:
+                            type: integer
+                            example: 7
+                          username:
+                            type: string
+                            example: rec_nyc1
+                          full_name:
+                            type: string
+                            example: Emily Brown
+                          role:
+                            type: string
+                            example: Receptionist
+                          branch_id:
+                            type: integer
+                            example: 1
+        '400':
+          description: Missing username or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/me:
+    get:
+      summary: Get current logged-in user profile
+      tags: [Auth]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      user_id:
+                        type: integer
+                        example: 7
+                      username:
+                        type: string
+                        example: rec_nyc1
+                      email:
+                        type: string
+                        example: emily.brown@grandplaza.com
+                      full_name:
+                        type: string
+                        example: Emily Brown
+                      role_name:
+                        type: string
+                        example: Receptionist
+                      branch_name:
+                        type: string
+                        example: Grand Plaza NYC
+                      last_login:
+                        type: string
+                        example: "2026-03-01T09:00:00.000Z"
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /rooms:
+    get:
+      summary: Get all rooms (branch-filtered for non-admins)
+      tags: [Rooms]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of rooms
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 12
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        room_id:
+                          type: integer
+                          example: 1
+                        room_number:
+                          type: string
+                          example: "101"
+                        floor_number:
+                          type: integer
+                          example: 1
+                        status:
+                          type: string
+                          example: available
+                        type_name:
+                          type: string
+                          example: Single
+                        base_price:
+                          type: string
+                          example: "99.00"
+                        branch_name:
+                          type: string
+                          example: Grand Plaza NYC
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /rooms/available:
+    get:
+      summary: Get available rooms for a date range
+      tags: [Rooms]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: branch_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            example: 1
+        - name: check_in
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-04-10"
+        - name: check_out
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-04-14"
+      responses:
+        '200':
+          description: Available rooms returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 5
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        room_id:
+                          type: integer
+                          example: 4
+                        room_number:
+                          type: string
+                          example: "104"
+                        type_name:
+                          type: string
+                          example: Double
+                        base_price:
+                          type: string
+                          example: "149.00"
+                        max_occupancy:
+                          type: integer
+                          example: 2
+        '400':
+          description: Missing required query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /rooms/{id}:
+    get:
+      summary: Get single room by ID
+      tags: [Rooms]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Room returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      room_id:
+                        type: integer
+                        example: 1
+                      room_number:
+                        type: string
+                        example: "101"
+                      status:
+                        type: string
+                        example: available
+                      type_name:
+                        type: string
+                        example: Single
+                      base_price:
+                        type: string
+                        example: "99.00"
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Room not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /rooms/{id}/status:
+    patch:
+      summary: Update room status (Admin and Manager only)
+      tags: [Rooms]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [available, occupied, maintenance, reserved]
+                  example: maintenance
+      responses:
+        '200':
+          description: Room status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Room status updated.
+                  data:
+                    type: object
+                    properties:
+                      room_id:
+                        type: integer
+                        example: 1
+                      status:
+                        type: string
+                        example: maintenance
+        '400':
+          description: Invalid status value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied — Admin and Manager only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Room not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /guests:
+    get:
+      summary: Get all guests with optional search
+      tags: [Guests]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+            example: robert
+      responses:
+        '200':
+          description: List of guests
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 40
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        guest_id:
+                          type: integer
+                          example: 1
+                        first_name:
+                          type: string
+                          example: Robert
+                        last_name:
+                          type: string
+                          example: Smith
+                        email:
+                          type: string
+                          example: robert.smith@email.com
+                        phone:
+                          type: string
+                          example: "+1-555-0101"
+                        nationality:
+                          type: string
+                          example: American
+                        loyalty_points:
+                          type: integer
+                          example: 250
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied — Housekeeping not permitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create a new guest
+      tags: [Guests]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [first_name, last_name, phone]
+              properties:
+                first_name:
+                  type: string
+                  example: Test
+                last_name:
+                  type: string
+                  example: User
+                email:
+                  type: string
+                  example: test.user@email.com
+                phone:
+                  type: string
+                  example: "+1-555-9999"
+                date_of_birth:
+                  type: string
+                  format: date
+                  example: "1990-05-15"
+                nationality:
+                  type: string
+                  example: American
+                id_type:
+                  type: string
+                  example: Passport
+                id_number:
+                  type: string
+                  example: US9999999
+                address:
+                  type: string
+                  example: 123 Main St
+                city:
+                  type: string
+                  example: New York
+                country:
+                  type: string
+                  example: USA
+      responses:
+        '201':
+          description: Guest created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Guest created successfully.
+                  data:
+                    type: object
+                    properties:
+                      guest_id:
+                        type: integer
+                        example: 41
+                      first_name:
+                        type: string
+                        example: Test
+                      last_name:
+                        type: string
+                        example: User
+        '400':
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate entry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /guests/{id}:
+    get:
+      summary: Get single guest with reservation stats
+      tags: [Guests]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Guest with stats returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      guest_id:
+                        type: integer
+                        example: 1
+                      first_name:
+                        type: string
+                        example: Robert
+                      last_name:
+                        type: string
+                        example: Smith
+                      email:
+                        type: string
+                        example: robert.smith@email.com
+                      total_reservations:
+                        type: string
+                        example: "3"
+                      lifetime_revenue:
+                        type: string
+                        example: "2397.00"
+                      last_visit_date:
+                        type: string
+                        example: "2026-02-14"
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guest not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      summary: Update guest details (partial update supported)
+      tags: [Guests]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                  example: Robert
+                last_name:
+                  type: string
+                  example: Smith
+                email:
+                  type: string
+                  example: robert.smith@email.com
+                phone:
+                  type: string
+                  example: "+1-555-0101"
+                address:
+                  type: string
+                  example: 456 New St
+                city:
+                  type: string
+                  example: New York
+                country:
+                  type: string
+                  example: USA
+      responses:
+        '200':
+          description: Guest updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Guest updated successfully.
+                  data:
+                    type: object
+                    properties:
+                      guest_id:
+                        type: integer
+                        example: 1
+                      first_name:
+                        type: string
+                        example: Robert
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Guest not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /reservations:
+    get:
+      summary: Get all reservations (branch-filtered for non-admins)
+      tags: [Reservations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, confirmed, checked_in, checked_out, cancelled]
+            example: checked_in
+      responses:
+        '200':
+          description: List of reservations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 50
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        reservation_id:
+                          type: integer
+                          example: 1
+                        check_in_date:
+                          type: string
+                          example: "2026-03-01"
+                        check_out_date:
+                          type: string
+                          example: "2026-03-05"
+                        status:
+                          type: string
+                          example: confirmed
+                        total_amount:
+                          type: string
+                          example: "596.00"
+                        first_name:
+                          type: string
+                          example: Robert
+                        last_name:
+                          type: string
+                          example: Smith
+                        room_number:
+                          type: string
+                          example: "101"
+                        branch_name:
+                          type: string
+                          example: Grand Plaza NYC
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create reservation and invoice atomically (Transaction 1)
+      tags: [Reservations]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [guest_id, branch_id, room_id, check_in_date, check_out_date, num_adults]
+              properties:
+                guest_id:
+                  type: integer
+                  example: 5
+                branch_id:
+                  type: integer
+                  example: 1
+                room_id:
+                  type: integer
+                  example: 4
+                check_in_date:
+                  type: string
+                  format: date
+                  example: "2026-04-10"
+                check_out_date:
+                  type: string
+                  format: date
+                  example: "2026-04-14"
+                num_adults:
+                  type: integer
+                  example: 2
+                num_children:
+                  type: integer
+                  example: 0
+                special_requests:
+                  type: string
+                  example: High floor preferred
+      responses:
+        '201':
+          description: Reservation and invoice created atomically
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Reservation and invoice created successfully.
+                  data:
+                    type: object
+                    properties:
+                      reservation:
+                        type: object
+                        properties:
+                          reservation_id:
+                            type: integer
+                            example: 51
+                          status:
+                            type: string
+                            example: confirmed
+                          total_amount:
+                            type: string
+                            example: "596.00"
+                      invoice:
+                        type: object
+                        properties:
+                          invoice_number:
+                            type: string
+                            example: INV-2026-0051
+                          payment_status:
+                            type: string
+                            example: unpaid
+                          total_amount:
+                            type: string
+                            example: "655.60"
+        '400':
+          description: Missing required fields or foreign key violation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Room not found — transaction rolled back
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Double booking conflict — transaction rolled back
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /reservations/{id}:
+    get:
+      summary: Get single reservation by ID
+      tags: [Reservations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Reservation returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      reservation_id:
+                        type: integer
+                        example: 1
+                      status:
+                        type: string
+                        example: confirmed
+                      total_amount:
+                        type: string
+                        example: "596.00"
+                      invoice_number:
+                        type: string
+                        example: INV-2026-0001
+                      payment_status:
+                        type: string
+                        example: unpaid
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Reservation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /reservations/{id}/checkout:
+    patch:
+      summary: Checkout a reservation and free the room (Transaction 2)
+      tags: [Reservations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Checkout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Checkout successful. Room is now available.
+                  data:
+                    type: object
+                    properties:
+                      reservation_id:
+                        type: integer
+                        example: 1
+                      status:
+                        type: string
+                        example: checked_out
+                      actual_check_out:
+                        type: string
+                        example: "2026-03-01T10:30:00.000Z"
+                      invoice:
+                        type: object
+                        properties:
+                          invoice_id:
+                            type: integer
+                            example: 1
+                          payment_status:
+                            type: string
+                            example: partial
+        '400':
+          description: Reservation is not in checked_in status — transaction rolled back
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Reservation or invoice not found — transaction rolled back
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /reservations/{id}/cancel:
+    patch:
+      summary: Cancel a reservation and mark invoice as refunded (Transaction 3)
+      tags: [Reservations]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 41
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: Guest changed travel plans
+      responses:
+        '200':
+          description: Reservation cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Reservation cancelled successfully.
+                  data:
+                    type: object
+                    properties:
+                      reservation_id:
+                        type: integer
+                        example: 41
+                      status:
+                        type: string
+                        example: cancelled
+        '400':
+          description: Already checked out or cancelled — transaction rolled back
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Reservation not found — transaction rolled back
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /invoices:
+    get:
+      summary: Get all invoices (Admin and Manager only, branch-filtered)
+      tags: [Invoices]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of invoices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 50
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        invoice_id:
+                          type: integer
+                          example: 1
+                        invoice_number:
+                          type: string
+                          example: INV-2026-0001
+                        total_amount:
+                          type: string
+                          example: "655.60"
+                        payment_status:
+                          type: string
+                          example: unpaid
+                        due_date:
+                          type: string
+                          example: "2026-03-05"
+                        first_name:
+                          type: string
+                          example: Robert
+                        last_name:
+                          type: string
+                          example: Smith
+                        branch_name:
+                          type: string
+                          example: Grand Plaza NYC
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied — Admin and Manager only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /invoices/overdue:
+    get:
+      summary: Get overdue invoices (Admin and Manager only)
+      tags: [Invoices]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of overdue invoices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 5
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        invoice_id:
+                          type: integer
+                          example: 11
+                        invoice_number:
+                          type: string
+                          example: INV-2026-0011
+                        total_amount:
+                          type: string
+                          example: "821.70"
+                        payment_status:
+                          type: string
+                          example: unpaid
+                        due_date:
+                          type: string
+                          example: "2026-02-14"
+                        days_overdue:
+                          type: integer
+                          example: 15
+                        first_name:
+                          type: string
+                          example: Robert
+                        last_name:
+                          type: string
+                          example: Smith
+                        email:
+                          type: string
+                          example: robert.smith@email.com
+                        phone:
+                          type: string
+                          example: "+1-555-0101"
+                        branch_name:
+                          type: string
+                          example: Grand Plaza NYC
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied — Admin and Manager only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /invoices/{id}:
+    get:
+      summary: Get single invoice by ID
+      tags: [Invoices]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Invoice returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      invoice_id:
+                        type: integer
+                        example: 1
+                      invoice_number:
+                        type: string
+                        example: INV-2026-0001
+                      subtotal:
+                        type: string
+                        example: "596.00"
+                      tax_amount:
+                        type: string
+                        example: "59.60"
+                      total_amount:
+                        type: string
+                        example: "655.60"
+                      payment_status:
+                        type: string
+                        example: unpaid
+                      due_date:
+                        type: string
+                        example: "2026-03-05"
+                      first_name:
+                        type: string
+                        example: Robert
+                      last_name:
+                        type: string
+                        example: Smith
+                      branch_name:
+                        type: string
+                        example: Grand Plaza NYC
+                      room_number:
+                        type: string
+                        example: "101"
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Invoice not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /invoices/{id}/payments:
+    post:
+      summary: Record a payment against an invoice (Transaction 4)
+      tags: [Invoices]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 11
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, payment_method]
+              properties:
+                amount:
+                  type: number
+                  example: 821.70
+                payment_method:
+                  type: string
+                  example: credit_card
+                transaction_id:
+                  type: string
+                  example: TXN-TEST-001
+                notes:
+                  type: string
+                  example: Full payment at checkout
+      responses:
+        '201':
+          description: Payment recorded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Payment recorded successfully.
+                  data:
+                    type: object
+                    properties:
+                      payment:
+                        type: object
+                        properties:
+                          payment_id:
+                            type: integer
+                            example: 61
+                          amount:
+                            type: string
+                            example: "821.70"
+                          payment_method:
+                            type: string
+                            example: credit_card
+                          status:
+                            type: string
+                            example: completed
+                      invoice:
+                        type: object
+                        properties:
+                          invoice_id:
+                            type: integer
+                            example: 11
+                          payment_status:
+                            type: string
+                            example: paid
+        '400':
+          description: Missing required fields or invoice already paid — transaction rolled back
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No token or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Invoice not found — transaction rolled back
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
